@@ -1,4 +1,4 @@
-name: Deploy Jekyll Site to GitHub Pages
+name: Generate Gemfile and Deploy Jekyll Site
 
 on:
   push:
@@ -6,8 +6,11 @@ on:
       - main  # Replace with your default branch name
 
 jobs:
-  deploy:
+  generate-and-deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Allow the GITHUB_TOKEN to push to the repository
 
     steps:
     - name: Checkout repository
@@ -17,6 +20,23 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.0'  # Use the Ruby version compatible with your Jekyll project
+
+    - name: Generate Gemfile if it doesn't exist
+      run: |
+        if [ ! -f Gemfile ]; then
+          echo "Generating Gemfile..."
+          cat <<EOL > Gemfile
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.3.2"
+gem "jekyll-feed", "~> 0.17.0"
+gem "jekyll-seo-tag", "~> 2.8.0"
+gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
+EOL
+          echo "Gemfile generated"
+        else
+          echo "Gemfile already exists"
+        fi
 
     - name: Install dependencies
       run: |
