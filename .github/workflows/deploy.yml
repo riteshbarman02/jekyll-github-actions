@@ -1,53 +1,66 @@
-name: Generate Gemfile and Deploy Jekyll Site
+name: Deploy Website from Forks
 
 on:
   push:
     branches:
-      - main  # Replace with your default branch name
+      - main  # Adjust if you want other branches to trigger deployment
 
 jobs:
-  generate-and-deploy:
+  update-gemfile:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write  # Allow the GITHUB_TOKEN to push to the repository
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.1
+          bundler-cache: true
+
+      - name: Ensure Gemfile exists
+        run: |
+          if [ ! -f "Gemfile" ]; then
+            echo 'source "https://rubygems.org"' > Gemfile
+            echo 'gem "jekyll"' >> Gemfile # Add other gems if needed
+          fi
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Check for Gemfile changes
+        run: |
+          git add Gemfile.lock
+          if git diff --cached --quiet; then
+            echo "No Gemfile.lock changes detected."
+          else
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update Gemfile.lock"
+            git push
+          fi
+
+  deploy:
+    needs: update-gemfile
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: '3.0'  # Use the Ruby version compatible with your Jekyll project
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.1
+          bundler-cache: true
 
-    - name: Generate Gemfile if it doesn't exist
-      run: |
-        if [ ! -f Gemfile ]; then
-          echo "Generating Gemfile..."
-          cat <<EOL > Gemfile
-source "https://rubygems.org"
+      - name: Build the website
+        run: bundle exec jekyll build
 
-gem "jekyll", "~> 4.3.2"
-gem "jekyll-feed", "~> 0.17.0"
-gem "jekyll-seo-tag", "~> 2.8.0"
-gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
-EOL
-          echo "Gemfile generated"
-        else
-          echo "Gemfile already exists"
-        fi
-
-    - name: Install dependencies
-      run: |
-        gem install bundler
-        bundle install
-
-    - name: Build the site
-      run: bundle exec jekyll build
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./_site
+      - name: Deploy to GitHub Pages (Fork-Friendly)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages  # Ensure the fork owner has this branch enabled
