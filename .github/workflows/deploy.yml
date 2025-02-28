@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   update-gemfile:
@@ -17,11 +20,11 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.1
-          bundler-cache: true
+          bundler-cache: false # Disable caching here
 
       - name: Ensure Linux platform is added to Bundler
         run: |
-          bundle lock --add-platform x86_64-linux
+          bundle lock --add-platform x86_64-linux || true
           git add Gemfile.lock
           if git diff --cached --quiet; then
             echo "No Gemfile.lock changes detected."
@@ -31,9 +34,6 @@ jobs:
             git commit -m "Add Linux platform to Gemfile.lock"
             git push
           fi
-
-      - name: Install dependencies
-        run: bundle install
 
   deploy:
     needs: update-gemfile
@@ -47,7 +47,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.1
-          bundler-cache: true
+          bundler-cache: true # Enable cache here after fix
+
+      - name: Install dependencies
+        run: bundle install
 
       - name: Build the website
         run: bundle exec jekyll build
