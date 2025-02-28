@@ -19,23 +19,21 @@ jobs:
           ruby-version: 3.1
           bundler-cache: true
 
-      - name: Add Linux platform to Bundler
-        run: bundle lock --add-platform x86_64-linux
-
-      - name: Install dependencies
-        run: bundle install
-
-      - name: Check for Gemfile changes
+      - name: Ensure Linux platform is added to Bundler
         run: |
+          bundle lock --add-platform x86_64-linux
           git add Gemfile.lock
           if git diff --cached --quiet; then
             echo "No Gemfile.lock changes detected."
           else
             git config --global user.name "github-actions[bot]"
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "Update Gemfile.lock"
+            git commit -m "Add Linux platform to Gemfile.lock"
             git push
           fi
+
+      - name: Install dependencies
+        run: bundle install
 
   deploy:
     needs: update-gemfile
