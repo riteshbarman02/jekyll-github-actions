@@ -3,7 +3,7 @@ name: Deploy Website from Forks
 on:
   push:
     branches:
-      - main  # Adjust if you want other branches to trigger deployment
+      - main
 
 jobs:
   update-gemfile:
@@ -19,12 +19,8 @@ jobs:
           ruby-version: 3.1
           bundler-cache: true
 
-      - name: Ensure Gemfile exists
-        run: |
-          if [ ! -f "Gemfile" ]; then
-            echo 'source "https://rubygems.org"' > Gemfile
-            echo 'gem "jekyll"' >> Gemfile # Add other gems if needed
-          fi
+      - name: Add Linux platform to Bundler
+        run: bundle lock --add-platform x86_64-linux
 
       - name: Install dependencies
         run: bundle install
@@ -63,4 +59,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./_site
-          publish_branch: gh-pages  # Ensure the fork owner has this branch enabled
+          publish_branch: gh-pages
